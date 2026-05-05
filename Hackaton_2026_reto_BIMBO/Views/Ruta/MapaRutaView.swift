@@ -66,6 +66,7 @@ struct MapaRutaView: View {
                 NavigationStack {
                     DetalleTiendaView(tienda: tienda)
                 }
+                .environmentObject(appState)
             }
         }
         .onAppear {

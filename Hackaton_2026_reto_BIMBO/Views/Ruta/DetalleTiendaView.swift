@@ -1,30 +1,23 @@
 
 import SwiftUI
  
-// MARK: - DetalleTiendaView (Rediseño: Copiloto IA + Override por Voz/Touch)
+// MARK: - DetalleTiendaView (Rediseño completo: paso a paso intuitivo)
 //
-// Filosofía:
-// • Una sola pantalla, una sola intención: registrar el surtido en <30s.
-// • La IA sugiere, el humano valida o ajusta con stepper directo (HCAI).
-// • Voz como acción protagonista (FAB persistente).
-// • Verde esmeralda = ingresar. Naranja ámbar = retirar. Suaves, no chillones.
-// • Caducidad: glow contextual sobre la card afectada, no sección aparte.
+// Flujo mental del repartidor:
+//  PASO 1 → Retirar caducados  (naranja, mic integrado)
+//  PASO 2 → Surtir estante     (verde, IA sugiere, mic integrado)
+//  📷     → Evidencia flotante (antes/después)
  
 struct DetalleTiendaView: View {
     let tienda: Tienda
  
+    @EnvironmentObject var appState: AppState
     @StateObject private var vm = PrediccionVentaViewModel()
  
-    // Estado de UI
     @State private var modoVoz: ModoVoz? = nil
     @State private var showEvidencia = false
-    @State private var showFiltros = false
-    @State private var searchText = ""
-    @State private var selectedCategoria: String? = nil
-    @State private var eventoAnadido = false
     @State private var headerAppeared = false
     @State private var contentAppeared = false
- 
     @Environment(\.dismiss) private var dismiss
  
     enum ModoVoz: Identifiable {
@@ -32,61 +25,61 @@ struct DetalleTiendaView: View {
         var id: Int { self == .ingresar ? 0 : 1 }
     }
  
-    // MARK: - Filtrado
-    private var productosFiltrados: [StockSugerido] {
-        vm.stockSugerido.filter { item in
-            let s = searchText.isEmpty ||
-                item.producto.nombre.localizedCaseInsensitiveContains(searchText)
-            let c = selectedCategoria == nil ||
-                item.producto.categoria == selectedCategoria
-            return s && c
-        }
-    }
- 
-    private var categoriasDisponibles: [String] {
-        Array(Set(vm.stockSugerido.map { $0.producto.categoria })).sorted()
-    }
- 
-    private var totalUnidades: Int {
-        vm.stockSugerido.reduce(0) { $0 + $1.cantidad }
-    }
- 
-    private var hayCaducidades: Bool {
-        !vm.productosConAlertaCaducidad.isEmpty
-    }
+    private var inventario: InventarioViewModel { appState.inventario }
  
     var body: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             Color.appBG.ignoresSafeArea()
  
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 20) {
-                    headerCompacto
+                VStack(spacing: 0) {
+                    // ─── Header ───
+                    tiendaHeader
                         .opacity(headerAppeared ? 1 : 0)
                         .offset(y: headerAppeared ? 0 : -16)
  
-                    copilotoResumen
+                    // ─── PASO 1: Retirar caducados ───
+                    paso1Caducados
+                        .padding(.top, 20)
                         .opacity(contentAppeared ? 1 : 0)
                         .offset(y: contentAppeared ? 0 : 12)
  
-                    listaProductos
+                    // ─── PASO 2: Surtir estante (IA sugiere) ───
+                    paso2Surtir
+                        .padding(.top, 24)
                         .opacity(contentAppeared ? 1 : 0)
  
-                    Color.clear.frame(height: 180)
+                    // ─── Resumen entregas a esta tienda ───
+                    resumenEntregas
+                        .padding(.top, 24)
+ 
+                    // ─── Guardar ───
+                    botonGuardar
+                        .padding(.top, 28)
+                        .padding(.bottom, 100)
                 }
                 .padding(.top, 12)
             }
  
-            barraInferior
+            // FAB cámara flotante
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    cameraFAB
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 28)
+                }
+            }
  
-            if vm.showBannerEvento, let evento = vm.eventoActivo, !eventoAnadido {
+            // Banner evento
+            if vm.showBannerEvento, let evento = vm.eventoActivo {
                 VStack {
                     DynamicContextBanner(
                         evento: evento,
                         onAnadir: {
                             withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                                 vm.showBannerEvento = false
-                                eventoAnadido = true
                             }
                         },
                         onIgnorar: {
@@ -101,16 +94,26 @@ struct DetalleTiendaView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Image("bimbo_logo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 28)
+                    .opacity(0.8)
+            }
+        }
         .sheet(item: $modoVoz) { modo in
             VoiceRestockBottomSheet(
                 tiendaNombre: tienda.nombre,
                 modoQuitar: modo == .retirar
             )
+            .environmentObject(appState)
         }
         .sheet(isPresented: $showEvidencia) {
             NavigationStack {
                 CamaraConteoView()
-                    .navigationTitle("Evidencia · \(tienda.nombre)")
+                    .navigationTitle("📷 \(tienda.nombre)")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .cancellationAction) {
@@ -119,11 +122,6 @@ struct DetalleTiendaView: View {
                         }
                     }
             }
-        }
-        .sheet(isPresented: $showFiltros) {
-            filtrosSheet
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
         }
         .onAppear {
             vm.cargar(tienda: tienda)
@@ -136,20 +134,22 @@ struct DetalleTiendaView: View {
         }
     }
  
-    // MARK: - Header compacto
-    private var headerCompacto: some View {
+    // ═══════════════════════════════════════════════════
+    // MARK: - Header
+    // ═══════════════════════════════════════════════════
+    private var tiendaHeader: some View {
         HStack(alignment: .top, spacing: 14) {
             ZStack {
                 Circle()
                     .fill(LinearGradient.bimboHero)
-                    .frame(width: 56, height: 56)
+                    .frame(width: 60, height: 60)
                     .shadow(color: Color.bimboBlue.opacity(0.25), radius: 10, y: 4)
                 Image(systemName: "storefront.fill")
-                    .font(.system(size: 24, weight: .bold))
+                    .font(.system(size: 26, weight: .bold))
                     .foregroundStyle(.white)
             }
  
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text(tienda.nombre)
                     .font(.title2.bold())
                     .foregroundStyle(Color.bimboNavy)
@@ -164,10 +164,29 @@ struct DetalleTiendaView: View {
                         .background(Color.bimboIce)
                         .clipShape(Capsule())
  
-                    if hayCaducidades {
-                        caducidadBadge
+                    if !inventario.productosPorCaducar.isEmpty {
+                        HStack(spacing: 3) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 9))
+                            Text("\(inventario.productosPorCaducar.count) caducan")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.bimboWarningOrange)
+                        .clipShape(Capsule())
                     }
                 }
+ 
+                // Stock del camión
+                HStack(spacing: 4) {
+                    Image(systemName: "box.truck.fill")
+                        .font(.system(size: 10))
+                    Text("\(inventario.totalRestantes) en camión")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .foregroundStyle(Color.bimboBlue)
             }
  
             Spacer()
@@ -175,260 +194,225 @@ struct DetalleTiendaView: View {
         .padding(.horizontal, 16)
     }
  
-    private var caducidadBadge: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "clock.badge.exclamationmark.fill")
-                .font(.system(size: 10, weight: .bold))
-            Text("\(vm.productosConAlertaCaducidad.count) por caducar")
-                .font(.system(size: 11, weight: .bold))
-        }
-        .foregroundStyle(.white)
-        .padding(.horizontal, 9)
-        .padding(.vertical, 3)
-        .background(Color.bimboWarningOrange)
-        .clipShape(Capsule())
-        .shadow(color: Color.bimboWarningOrange.opacity(0.4), radius: 6, y: 2)
-    }
- 
-    // MARK: - Resumen del copiloto
-    private var copilotoResumen: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 10) {
-                ZStack {
-                    Circle()
-                        .fill(LinearGradient(
-                            colors: [Color.bimboBlue, Color.bimboNavy],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-                        .frame(width: 32, height: 32)
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.white)
-                }
- 
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("COPILOTO SUGIERE")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.secondary)
-                        .tracking(0.6)
-                    Text("\(totalUnidades) unidades para hoy")
-                        .font(.system(size: 18, weight: .heavy, design: .rounded))
-                        .foregroundStyle(Color.bimboNavy)
-                }
- 
-                Spacer()
- 
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    showFiltros = true
-                } label: {
-                    Image(systemName: "line.3.horizontal.decrease.circle.fill")
-                        .font(.system(size: 26))
-                        .foregroundStyle(Color.bimboBlue)
-                        .symbolRenderingMode(.hierarchical)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 16)
- 
-            // Disclosure: por qué la IA sugiere esto
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: "info.circle.fill")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.bimboBlue.opacity(0.8))
-                    .padding(.top, 2)
- 
-                Text("Basado en historial de la tienda, caducidad y eventos cercanos. Puedes ajustar libremente cualquier cantidad.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.bimboBlue.opacity(0.06))
+    // ═══════════════════════════════════════════════════
+    // MARK: - PASO 1: Retirar caducados
+    // ═══════════════════════════════════════════════════
+    private var paso1Caducados: some View {
+        VStack(spacing: 14) {
+            // Encabezado del paso
+            PasoHeader(
+                number: 1,
+                title: "Retirar caducados",
+                subtitle: "Quita del estante lo que está por vencer",
+                icon: "clock.badge.exclamationmark.fill",
+                color: Color.bimboWarningOrange
             )
             .padding(.horizontal, 16)
+ 
+            if inventario.productosPorCaducar.isEmpty {
+                // Sin caducados
+                HStack(spacing: 10) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(Color.bimboSuccessGreen)
+                    Text("Sin productos por caducar")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+                .background(.regularMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .padding(.horizontal, 16)
+            } else {
+                // Lista de caducados
+                VStack(spacing: 8) {
+                    ForEach(inventario.productosPorCaducar) { item in
+                        CaducadoRow(
+                            item: item,
+                            onRetirar: {
+                                inventario.registrarDevolucion(
+                                    tiendaId: tienda.id,
+                                    productoId: item.producto.id,
+                                    cantidad: 1
+                                )
+                            }
+                        )
+                    }
+                }
+                .padding(.horizontal, 16)
+ 
+                // Botón voz para quitar
+                VoiceActionButton(
+                    label: "Retirar por voz",
+                    icon: "mic.fill",
+                    color: Color.bimboWarningOrange
+                ) { modoVoz = .retirar }
+                .padding(.horizontal, 16)
+            }
         }
     }
  
-    // MARK: - Lista de productos
-    private var listaProductos: some View {
-        VStack(spacing: 10) {
-            if productosFiltrados.isEmpty {
-                emptyState
-            } else {
-                ForEach(productosFiltrados, id: \.producto.id) { item in
-                    ProductoRowCard(
+    // ═══════════════════════════════════════════════════
+    // MARK: - PASO 2: Surtir estante
+    // ═══════════════════════════════════════════════════
+    private var paso2Surtir: some View {
+        VStack(spacing: 14) {
+            PasoHeader(
+                number: 2,
+                title: "Surtir estante",
+                subtitle: "IA sugiere basado en histórico de ventas",
+                icon: "sparkles",
+                color: Color.bimboBlue
+            )
+            .padding(.horizontal, 16)
+ 
+            // Texto HCAI
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "lightbulb.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.bimboBlue)
+                    .padding(.top, 2)
+                Text("Ajusta las cantidades con los botones. Lo que dejes se descuenta de tu camión.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(12)
+            .background(Color.bimboBlue.opacity(0.06))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .padding(.horizontal, 16)
+ 
+            // Lista de productos sugeridos
+            VStack(spacing: 8) {
+                ForEach(vm.stockSugerido, id: \.producto.id) { item in
+                    SurtidoRow(
                         item: item,
+                        disponibleEnCamion: inventario.stockDisponible(productoId: item.producto.id),
                         onIncrement: { incrementar(item) },
                         onDecrement: { decrementar(item) }
                     )
+                }
+            }
+            .padding(.horizontal, 16)
+            .animation(.spring(response: 0.4, dampingFraction: 0.8),
+                       value: vm.stockSugerido.map { $0.cantidad })
+ 
+            // Botón voz para agregar
+            VoiceActionButton(
+                label: "Agregar por voz",
+                icon: "mic.fill",
+                color: Color.bimboSuccessGreen
+            ) { modoVoz = .ingresar }
+            .padding(.horizontal, 16)
+        }
+    }
+ 
+    // ═══════════════════════════════════════════════════
+    // MARK: - Resumen de entregas a esta tienda
+    // ═══════════════════════════════════════════════════
+    private var resumenEntregas: some View {
+        let entregas = inventario.entregadosEn(tiendaId: tienda.id)
+        let total = entregas.values.reduce(0, +)
+ 
+        return Group {
+            if total > 0 {
+                VStack(spacing: 10) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "list.clipboard.fill")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(Color.bimboBlue)
+                        Text("Dejaste en esta tienda")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(Color.bimboNavy)
+                        Spacer()
+                        Text("\(total) uds")
+                            .font(.system(size: 14, weight: .black, design: .rounded))
+                            .foregroundStyle(Color.bimboBlue)
+                    }
                     .padding(.horizontal, 16)
-                    .transition(.scale(scale: 0.95).combined(with: .opacity))
-                }
-            }
-        }
-        .animation(.spring(response: 0.4, dampingFraction: 0.8),
-                   value: productosFiltrados.map { $0.producto.id })
-    }
  
-    private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 32, weight: .light))
-                .foregroundStyle(Color.gray.opacity(0.5))
-            Text("Sin coincidencias")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.secondary)
-            if !searchText.isEmpty || selectedCategoria != nil {
-                Button {
-                    withAnimation(.spring()) {
-                        searchText = ""
-                        selectedCategoria = nil
-                    }
-                } label: {
-                    Text("Limpiar filtros")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(Color.bimboBlue)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
-    }
- 
-    // MARK: - Barra inferior
-    private var barraInferior: some View {
-        VStack(spacing: 10) {
-            HStack(spacing: 10) {
-                SecondaryAction(
-                    icon: "camera.fill",
-                    label: "Foto",
-                    accent: Color.bimboBlue,
-                    filled: false
-                ) { showEvidencia = true }
- 
-                SecondaryAction(
-                    icon: "checkmark.seal.fill",
-                    label: "Guardar",
-                    accent: Color.bimboSuccessGreen,
-                    filled: true
-                ) {
-                    UINotificationFeedbackGenerator().notificationOccurred(.success)
-                    vm.guardarStock(tiendaId: tienda.id)
-                    dismiss()
-                }
-            }
- 
-            HStack(spacing: 12) {
-                VoiceFAB(
-                    label: "Ingresar",
-                    icon: "plus",
-                    color: Color.bimboSuccessGreen
-                ) { modoVoz = .ingresar }
- 
-                VoiceFAB(
-                    label: "Retirar",
-                    icon: "minus",
-                    color: Color.bimboWarningOrange
-                ) { modoVoz = .retirar }
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 16)
-        .padding(.bottom, 24)
-        .background(
-            LinearGradient(
-                colors: [
-                    Color.appBG.opacity(0),
-                    Color.appBG.opacity(0.85),
-                    Color.appBG
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
-        )
-    }
- 
-    // MARK: - Filtros sheet
-    private var filtrosSheet: some View {
-        NavigationStack {
-            VStack(spacing: 20) {
-                HStack(spacing: 10) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.secondary)
-                    TextField("Buscar producto...", text: $searchText)
-                        .font(.system(size: 16))
-                    if !searchText.isEmpty {
-                        Button {
-                            withAnimation(.spring()) { searchText = "" }
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(Color.gray.opacity(0.5))
-                        }
-                    }
-                }
-                .padding(14)
-                .background(Color.bimboIce)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
- 
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("CATEGORÍA")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(.secondary)
-                        .tracking(0.5)
- 
-                    FlowLayout(spacing: 8) {
-                        CategoryChip(label: "Todos",
-                                     isSelected: selectedCategoria == nil) {
-                            withAnimation(.spring()) { selectedCategoria = nil }
-                        }
-                        ForEach(categoriasDisponibles, id: \.self) { cat in
-                            CategoryChip(label: cat,
-                                         isSelected: selectedCategoria == cat) {
-                                withAnimation(.spring()) {
-                                    selectedCategoria = selectedCategoria == cat ? nil : cat
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(Array(entregas.keys.sorted()), id: \.self) { productoId in
+                                if let cantidad = entregas[productoId], cantidad > 0,
+                                   let producto = Producto.mockCatalogo.first(where: { $0.id == productoId }) {
+                                    EntregaChip(producto: producto, cantidad: cantidad)
                                 }
                             }
                         }
+                        .padding(.horizontal, 16)
                     }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
- 
-                Spacer()
- 
-                Button {
-                    showFiltros = false
-                } label: {
-                    Text("Aplicar")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color.bimboBlue)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                }
-            }
-            .padding(20)
-            .navigationTitle("Filtrar")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cerrar") { showFiltros = false }
                 }
             }
         }
     }
  
-    // MARK: - Acciones de stepper
+    // ═══════════════════════════════════════════════════
+    // MARK: - Guardar
+    // ═══════════════════════════════════════════════════
+    private var botonGuardar: some View {
+        Button {
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            // Procesar las cantidades sugeridas como entregas reales
+            for item in vm.stockSugerido where item.cantidad > 0 {
+                let yaEntregado = inventario.entregadosEn(tiendaId: tienda.id)[item.producto.id] ?? 0
+                let nuevo = item.cantidad - yaEntregado
+                if nuevo > 0 {
+                    inventario.registrarEntrega(
+                        tiendaId: tienda.id,
+                        productoId: item.producto.id,
+                        cantidad: nuevo
+                    )
+                }
+            }
+            vm.guardarStock(tiendaId: tienda.id)
+            dismiss()
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 22, weight: .bold))
+                Text("Guardar y Salir")
+                    .font(.system(size: 18, weight: .heavy))
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 60)
+            .background(Color.bimboSuccessGreen)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .shadow(color: Color.bimboSuccessGreen.opacity(0.35), radius: 12, y: 6)
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
+    }
+ 
+    // ═══════════════════════════════════════════════════
+    // MARK: - FAB Cámara flotante
+    // ═══════════════════════════════════════════════════
+    private var cameraFAB: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            showEvidencia = true
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(LinearGradient.bimboHero)
+                    .frame(width: 62, height: 62)
+                    .shadow(color: Color.bimboBlue.opacity(0.4), radius: 12, y: 6)
+                Image(systemName: "camera.fill")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Tomar foto de evidencia")
+    }
+ 
+    // MARK: - Helpers
     private func incrementar(_ item: StockSugerido) {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        if let idx = vm.stockSugerido.firstIndex(where: { $0.producto.id == item.producto.id }) {
+        let disponible = inventario.stockDisponible(productoId: item.producto.id)
+        if let idx = vm.stockSugerido.firstIndex(where: { $0.producto.id == item.producto.id }),
+           vm.stockSugerido[idx].cantidad < disponible {
             vm.stockSugerido[idx].cantidad += 1
         }
     }
@@ -442,155 +426,171 @@ struct DetalleTiendaView: View {
     }
 }
  
-// MARK: - Producto Row Card
-private struct ProductoRowCard: View {
-    let item: StockSugerido
-    let onIncrement: () -> Void
-    let onDecrement: () -> Void
+// ═══════════════════════════════════════════════════════
+// MARK: - Sub-componentes
+// ═══════════════════════════════════════════════════════
  
-    private var esCaducidad: Bool {
-        item.producto.diasCaducidad <= 10 && item.cantidad > 0
+// MARK: Paso Header (número + título + ícono)
+private struct PasoHeader: View {
+    let number: Int
+    let title: String
+    let subtitle: String
+    let icon: String
+    let color: Color
+ 
+    var body: some View {
+        HStack(spacing: 12) {
+            // Número de paso
+            Text("\(number)")
+                .font(.system(size: 16, weight: .black, design: .rounded))
+                .foregroundStyle(.white)
+                .frame(width: 32, height: 32)
+                .background(color)
+                .clipShape(Circle())
+                .shadow(color: color.opacity(0.3), radius: 6, y: 3)
+ 
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Image(systemName: icon)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(color)
+                    Text(title)
+                        .font(.system(size: 17, weight: .heavy))
+                        .foregroundStyle(Color.bimboNavy)
+                }
+                Text(subtitle)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+ 
+            Spacer()
+        }
     }
+}
+ 
+// MARK: Caducado Row
+private struct CaducadoRow: View {
+    let item: StockItem
+    let onRetirar: () -> Void
  
     var body: some View {
         HStack(spacing: 14) {
-            ProductoThumb(producto: item.producto)
+            // Thumbnail GRANDE
+            ProductoThumb(producto: item.producto, size: 64)
  
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.producto.nombre)
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(.primary)
+                    .font(.system(size: 16, weight: .heavy))
+                    .foregroundStyle(Color.bimboNavy)
                     .lineLimit(1)
- 
-                HStack(spacing: 6) {
-                    Text(item.producto.categoria)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
- 
-                    if esCaducidad {
-                        caducidadInline
-                    }
+                HStack(spacing: 5) {
+                    Image(systemName: "clock.fill")
+                        .font(.system(size: 10, weight: .bold))
+                    Text("\(item.producto.diasCaducidad)d")
+                        .font(.system(size: 13, weight: .black, design: .rounded))
+                    Text("· \(item.stockActual) uds")
+                        .font(.system(size: 13, weight: .semibold))
                 }
+                .foregroundStyle(Color.bimboWarningOrange)
             }
  
-            Spacer(minLength: 4)
+            Spacer()
  
-            stepperGroup
+            // Botón retirar
+            Button(action: onRetirar) {
+                HStack(spacing: 5) {
+                    Image(systemName: "minus")
+                        .font(.system(size: 16, weight: .black))
+                    Text("1")
+                        .font(.system(size: 16, weight: .black, design: .rounded))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 12)
+                .background(Color.bimboWarningOrange)
+                .clipShape(Capsule())
+                .shadow(color: Color.bimboWarningOrange.opacity(0.3), radius: 6, y: 3)
+            }
+            .buttonStyle(.plain)
         }
         .padding(14)
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(cardBorder)
-        .shadow(
-            color: esCaducidad
-                ? Color.bimboWarningOrange.opacity(0.15)
-                : Color.black.opacity(0.04),
-            radius: esCaducidad ? 10 : 6,
-            y: 3
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.bimboWarningOrange.opacity(0.3), lineWidth: 1)
         )
     }
- 
-    private var caducidadInline: some View {
-        HStack(spacing: 3) {
-            Image(systemName: "clock.fill")
-                .font(.system(size: 8))
-            Text("\(item.producto.diasCaducidad)d")
-                .font(.system(size: 10, weight: .black))
-        }
-        .foregroundStyle(Color.bimboWarningOrange)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 2)
-        .background(Color.bimboWarningOrange.opacity(0.15))
-        .clipShape(Capsule())
-    }
- 
-    private var stepperGroup: some View {
-        HStack(spacing: 0) {
-            MiniStepperButton(
-                icon: "minus",
-                color: Color.bimboWarningOrange,
-                enabled: item.cantidad > 0,
-                action: onDecrement
-            )
- 
-            Text("\(item.cantidad)")
-                .font(.system(size: 22, weight: .heavy, design: .rounded))
-                .foregroundStyle(Color.bimboNavy)
-                .frame(minWidth: 40)
-                .contentTransition(.numericText())
-                .animation(.spring(response: 0.3), value: item.cantidad)
- 
-            MiniStepperButton(
-                icon: "plus",
-                color: Color.bimboSuccessGreen,
-                enabled: true,
-                action: onIncrement
-            )
-        }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 4)
-        .background(Capsule().fill(Color.bimboIce.opacity(0.6)))
-    }
- 
-    @ViewBuilder
-    private var cardBorder: some View {
-        if esCaducidad {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.bimboWarningOrange.opacity(0.5), lineWidth: 1.5)
-        }
-    }
 }
  
-// MARK: - Producto Thumbnail (extraído para que el compilador no se ahogue)
-private struct ProductoThumb: View {
-    let producto: Producto
+// MARK: Surtido Row (paso 2, con stepper e imagen grande)
+private struct SurtidoRow: View {
+    let item: StockSugerido
+    let disponibleEnCamion: Int
+    let onIncrement: () -> Void
+    let onDecrement: () -> Void
  
     var body: some View {
-        thumbContent
-            .frame(width: 56, height: 56)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.bimboIce.opacity(0.5))
-            )
-    }
+        HStack(spacing: 14) {
+            // Imagen GRANDE
+            ProductoThumb(producto: item.producto, size: 64)
  
-    @ViewBuilder
-    private var thumbContent: some View {
-        if producto.tieneImagen {
-            Image(producto.imagenAsset)
-                .resizable()
-                .scaledToFit()
-        } else {
-            Image(systemName: "shippingbox.fill")
-                .font(.system(size: 26))
-                .foregroundStyle(Color.bimboBlue.opacity(0.5))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.producto.nombre)
+                    .font(.system(size: 16, weight: .heavy))
+                    .foregroundStyle(Color.bimboNavy)
+                    .lineLimit(1)
+                HStack(spacing: 5) {
+                    Image(systemName: "box.truck.fill")
+                        .font(.system(size: 10, weight: .bold))
+                    Text("\(disponibleEnCamion) disp.")
+                        .font(.system(size: 13, weight: .bold))
+                }
+                .foregroundStyle(Color.bimboBlue.opacity(0.7))
+            }
+ 
+            Spacer(minLength: 4)
+ 
+            // Stepper
+            HStack(spacing: 0) {
+                Button(action: onDecrement) {
+                    Image(systemName: "minus")
+                        .font(.system(size: 16, weight: .black))
+                        .foregroundStyle(item.cantidad > 0 ? Color.bimboWarningOrange : Color.gray.opacity(0.4))
+                        .frame(width: 46, height: 46)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(item.cantidad <= 0)
+ 
+                Text("\(item.cantidad)")
+                    .font(.system(size: 24, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.bimboNavy)
+                    .frame(minWidth: 38)
+                    .contentTransition(.numericText())
+                    .animation(.spring(response: 0.3), value: item.cantidad)
+ 
+                Button(action: onIncrement) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 16, weight: .black))
+                        .foregroundStyle(item.cantidad < disponibleEnCamion ? Color.bimboSuccessGreen : Color.gray.opacity(0.4))
+                        .frame(width: 46, height: 46)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(item.cantidad >= disponibleEnCamion)
+            }
+            .padding(.horizontal, 4)
+            .background(Capsule().fill(Color.bimboIce.opacity(0.6)))
         }
+        .padding(14)
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 }
  
-// MARK: - Mini Stepper Button (renombrado para no chocar con el global StepperButton)
-private struct MiniStepperButton: View {
-    let icon: String
-    let color: Color
-    let enabled: Bool
-    let action: () -> Void
- 
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 15, weight: .black))
-                .foregroundStyle(enabled ? color : Color.gray.opacity(0.4))
-                .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(!enabled)
-    }
-}
- 
-// MARK: - Voice FAB
-private struct VoiceFAB: View {
+// MARK: Voice Action Button (largo, con mic)
+private struct VoiceActionButton: View {
     let label: String
     let icon: String
     let color: Color
@@ -602,148 +602,81 @@ private struct VoiceFAB: View {
             action()
         } label: {
             HStack(spacing: 10) {
-                ZStack {
-                    Circle()
-                        .fill(Color.white.opacity(0.25))
-                        .frame(width: 32, height: 32)
-                    Image(systemName: icon)
-                        .font(.system(size: 16, weight: .black))
-                        .foregroundStyle(.white)
-                }
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 36, height: 36)
+                    .background(Color.white.opacity(0.25))
+                    .clipShape(Circle())
  
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(label)
-                        .font(.system(size: 15, weight: .heavy))
-                        .foregroundStyle(.white)
-                    HStack(spacing: 3) {
-                        Image(systemName: "mic.fill")
-                            .font(.system(size: 9, weight: .bold))
-                        Text("Voz")
-                            .font(.system(size: 10, weight: .bold))
-                    }
-                    .foregroundStyle(Color.white.opacity(0.85))
-                }
+                Text(label)
+                    .font(.system(size: 15, weight: .heavy))
+                    .foregroundStyle(.white)
  
-                Spacer(minLength: 0)
+                Spacer()
+ 
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.7))
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .frame(maxWidth: .infinity)
             .background(
                 LinearGradient(
                     colors: [color, color.opacity(0.85)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
+                    startPoint: .leading,
+                    endPoint: .trailing
                 )
             )
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .shadow(color: color.opacity(0.35), radius: 12, y: 6)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .shadow(color: color.opacity(0.3), radius: 10, y: 5)
         }
         .buttonStyle(.plain)
     }
 }
  
-// MARK: - Secondary Action
-private struct SecondaryAction: View {
-    let icon: String
-    let label: String
-    let accent: Color
-    let filled: Bool
-    let action: () -> Void
+// MARK: Entrega Chip (resumen horizontal)
+private struct EntregaChip: View {
+    let producto: Producto
+    let cantidad: Int
  
     var body: some View {
-        Button(action: {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            action()
-        }) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 13, weight: .bold))
-                Text(label)
-                    .font(.system(size: 14, weight: .bold))
-            }
-            .foregroundStyle(filled ? Color.white : accent)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(filled ? accent : accent.opacity(0.1))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(actionBorder)
+        HStack(spacing: 6) {
+            ProductoThumb(producto: producto, size: 28)
+            Text("\(cantidad)")
+                .font(.system(size: 14, weight: .black, design: .rounded))
+                .foregroundStyle(Color.bimboNavy)
         }
-        .buttonStyle(.plain)
-    }
- 
-    @ViewBuilder
-    private var actionBorder: some View {
-        if !filled {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(accent.opacity(0.3), lineWidth: 1)
-        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.bimboSuccessGreen.opacity(0.1))
+        .clipShape(Capsule())
+        .overlay(
+            Capsule().stroke(Color.bimboSuccessGreen.opacity(0.3), lineWidth: 1)
+        )
     }
 }
  
-// MARK: - Category Chip
-private struct CategoryChip: View {
-    let label: String
-    let isSelected: Bool
-    let action: () -> Void
+// MARK: Producto Thumbnail (reutilizable)
+private struct ProductoThumb: View {
+    let producto: Producto
+    var size: CGFloat = 56
  
     var body: some View {
-        Button(action: {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            action()
-        }) {
-            Text(label)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(isSelected ? Color.white : Color.bimboNavy)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(isSelected ? Color.bimboBlue : Color.bimboIce)
-                .clipShape(Capsule())
-        }
-        .buttonStyle(.plain)
-    }
-}
- 
-// MARK: - FlowLayout
-private struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
- 
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let maxWidth = proposal.width ?? .infinity
-        var totalHeight: CGFloat = 0
-        var lineWidth: CGFloat = 0
-        var lineHeight: CGFloat = 0
- 
-        for sub in subviews {
-            let size = sub.sizeThatFits(.unspecified)
-            if lineWidth + size.width > maxWidth {
-                totalHeight += lineHeight + spacing
-                lineWidth = size.width + spacing
-                lineHeight = size.height
+        ZStack {
+            RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
+                .fill(Color.bimboIce.opacity(0.5))
+                .frame(width: size, height: size)
+            if producto.tieneImagen {
+                Image(producto.imagenAsset)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: size * 0.8, height: size * 0.8)
             } else {
-                lineWidth += size.width + spacing
-                lineHeight = max(lineHeight, size.height)
+                Image(systemName: "shippingbox.fill")
+                    .font(.system(size: size * 0.45))
+                    .foregroundStyle(Color.bimboBlue.opacity(0.5))
             }
-        }
-        totalHeight += lineHeight
-        return CGSize(width: maxWidth, height: totalHeight)
-    }
- 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var x = bounds.minX
-        var y = bounds.minY
-        var lineHeight: CGFloat = 0
- 
-        for sub in subviews {
-            let size = sub.sizeThatFits(.unspecified)
-            if x + size.width > bounds.maxX {
-                x = bounds.minX
-                y += lineHeight + spacing
-                lineHeight = 0
-            }
-            sub.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
-            x += size.width + spacing
-            lineHeight = max(lineHeight, size.height)
         }
     }
 }
@@ -751,5 +684,6 @@ private struct FlowLayout: Layout {
 #Preview {
     NavigationStack {
         DetalleTiendaView(tienda: Tienda.mockTiendas[0])
+            .environmentObject(AppState())
     }
 }

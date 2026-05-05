@@ -7,6 +7,7 @@ struct VoiceRestockBottomSheet: View {
     let tiendaNombre: String
     let modoQuitar: Bool
 
+    @EnvironmentObject var appState: AppState
     @StateObject private var vm: VoiceAssistantViewModel
     @State private var pulse     = false
     @State private var wavePhase: Double = 0
@@ -219,7 +220,11 @@ struct VoiceRestockBottomSheet: View {
                         label: "Confirmar Pedido",
                         icon: "checkmark.seal.fill",
                         color: Color.bimboSuccessGreen
-                    ) { vm.confirmarPedido() }
+                    ) {
+                        // Actualizar inventario del camión
+                        appState.inventario.procesarRestock(items: vm.items, tiendaId: tiendaNombre)
+                        vm.confirmarPedido()
+                    }
                 }
             }
             .padding(.horizontal, 24)
