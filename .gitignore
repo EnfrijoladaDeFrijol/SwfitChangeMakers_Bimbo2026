@@ -1,0 +1,50 @@
+# --- Xcode ---
+#
+# Gitignore para proyectos de Swift y SwiftUI
+# Basado en los estándares de Apple y GitHub
+
+# Build artifacts
+build/
+DerivedData/
+
+# Personal settings (¡Muy importante ignorar estos!)
+*.xcuserstate
+project.xcworkspace/xcuserdata/
+*.xcuserdatad
+*.xccheckout
+*.xcscmblueprint
+
+# Swift Package Manager
+.build/
+.swiftpm/xcode/package.xcworkspace/xcuserdata/
+
+# Unit Tests
+*.xctest
+
+# Playgrounds
+timeline.xctimeline
+playground.xcworkspace/xcuserdata/
+
+# --- macOS ---
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon must end with two \r
+Icon
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# --- Miscellaneous ---
+*.swp
+*.lock
