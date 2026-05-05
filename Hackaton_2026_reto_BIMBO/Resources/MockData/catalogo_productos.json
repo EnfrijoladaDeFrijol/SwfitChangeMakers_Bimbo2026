@@ -1,0 +1,53 @@
+{
+  "productos": [
+    {
+      "id_producto": "P-001",
+      "nombre": "Gansito",
+      "categoria": "Pastelitos",
+      "dias_caducidad": 15,
+      "precio_sugerido": 20.00
+    },
+    {
+      "id_producto": "P-002",
+      "nombre": "Pan Blanco Bimbo Grande",
+      "categoria": "Pan de Caja",
+      "dias_caducidad": 12,
+      "precio_sugerido": 45.00
+    },
+    {
+      "id_producto": "P-003",
+      "nombre": "Donitas Espolvoreadas",
+      "categoria": "Pan Dulce",
+      "dias_caducidad": 10,
+      "precio_sugerido": 22.00
+    },
+    {
+      "id_producto": "P-004",
+      "nombre": "Marinela Pingüinos",
+      "categoria": "Pastelitos",
+      "dias_caducidad": 18,
+      "precio_sugerido": 18.00
+    },
+    {
+      "id_producto": "P-005",
+      "nombre": "Bimbollos",
+      "categoria": "Pan",
+      "dias_caducidad": 7,
+      "precio_sugerido": 28.00
+    },
+    {
+      "id_producto": "P-006",
+      "nombre": "Nito",
+      "categoria": "Pan Dulce",
+      "dias_caducidad": 12,
+      "precio_sugerido": 20.00
+    },
+    {
+      "id_producto": "P-007",
+      "nombre": "Roles de Canela",
+      "categoria": "Pan Dulce",
+      "dias_caducidad": 10,
+      "precio_sugerido": 25.00
+    }
+  ]
+}
