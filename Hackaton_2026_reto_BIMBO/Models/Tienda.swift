@@ -8,6 +8,12 @@ struct Coordenadas: Codable {
     var clLocation: CLLocationCoordinate2D { CLLocationCoordinate2D(latitude: lat, longitude: lon) }
 }
 
+struct CentroDistribucion: Codable, Identifiable {
+    var id = UUID()
+    let nombre: String
+    let coordenadas: Coordenadas
+}
+
 struct EventoLocal: Codable, Identifiable {
     var id = UUID()
     let fecha: String

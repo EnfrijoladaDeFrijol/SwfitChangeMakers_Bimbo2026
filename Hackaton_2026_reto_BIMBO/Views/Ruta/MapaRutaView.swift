@@ -17,6 +17,17 @@ struct MapaRutaView: View {
         ZStack(alignment: .bottom) {
             // Mapa iOS 17+
             Map(position: $cameraPosition) {
+                // Trazado de ruta optimizada (multicolor)
+                ForEach(Array(vm.rutasMapKit.enumerated()), id: \.offset) { index, route in
+                    MapPolyline(route)
+                        .stroke(vm.coloresRutas[index % vm.coloresRutas.count].opacity(0.8), style: StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round))
+                }
+                
+                // Pin del Centro de Distribución
+                Annotation(vm.centroDistribucion.nombre, coordinate: vm.centroDistribucion.coordenadas.clLocation) {
+                    AnimatedCEDISPin()
+                }
+
                 ForEach(vm.ruta.tiendas) { tienda in
                     Annotation(tienda.nombre, coordinate: tienda.coordenadas.clLocation) {
                         AnimatedTiendaPin(tienda: tienda) {
@@ -34,6 +45,21 @@ struct MapaRutaView: View {
             }
             .offset(y: sheetAppeared ? 0 : 200)
             .opacity(sheetAppeared ? 1 : 0)
+        }
+        .overlay(alignment: .top) {
+            // Banner de tiempo y sustentabilidad
+            if vm.isCalculandoRuta {
+                ProgressView("Calculando ruta sustentable...")
+                    .padding()
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding(.top, 16)
+            } else if vm.tiempoEstimadoRuta > 0 {
+                SustentabilidadBanner(tiempoEstimado: vm.tiempoEstimadoRuta)
+                    .offset(y: sheetAppeared ? 0 : -100)
+                    .opacity(sheetAppeared ? 1 : 0)
+                    .padding(.top, 16)
+            }
         }
         .toolbar {
             // Logo a la izquierda
@@ -71,6 +97,92 @@ struct MapaRutaView: View {
         .onAppear {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.3)) {
                 sheetAppeared = true
+            }
+        }
+    }
+}
+
+// MARK: - Banner de Sustentabilidad y Tiempo
+private struct SustentabilidadBanner: View {
+    let tiempoEstimado: TimeInterval
+    
+    var minutosTotales: Int {
+        Int(tiempoEstimado / 60)
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(Color.bimboBlue.opacity(0.2))
+                    .frame(width: 40, height: 40)
+                Image(systemName: "leaf.fill")
+                    .foregroundColor(.green)
+                    .font(.system(size: 20))
+            }
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Ruta más sustentable y rápida")
+                    .font(.caption.bold())
+                    .foregroundStyle(Color.bimboNavy)
+                Text("Tiempo aprox: \(minutosTotales) min")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            
+            Spacer()
+            
+            Image(systemName: "checkmark.seal.fill")
+                .foregroundColor(Color.bimboBlue)
+                .font(.title2)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: .black.opacity(0.1), radius: 10, y: 5)
+        .padding(.horizontal, 20)
+    }
+}
+
+// MARK: - Animated CEDIS Pin
+private struct AnimatedCEDISPin: View {
+    @State private var pulse = false
+    @State private var appeared = false
+
+    var body: some View {
+        ZStack {
+            // Anillo de pulso
+            Circle()
+                .stroke(Color.bimboNavy.opacity(0.4), lineWidth: 2)
+                .frame(width: 60, height: 60)
+                .scaleEffect(pulse ? 1.5 : 1.0)
+                .opacity(pulse ? 0 : 0.8)
+                .animation(
+                    .easeOut(duration: 2.0)
+                    .repeatForever(autoreverses: false),
+                    value: pulse
+                )
+
+            // Pin principal
+            Circle()
+                .fill(Color.bimboNavy)
+                .frame(width: 44, height: 44)
+                .shadow(color: Color.bimboNavy.opacity(0.5), radius: 8, y: 4)
+                .overlay(
+                    Image(systemName: "building.2.fill") // o "box.truck.fill"
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(.white)
+                )
+                .scaleEffect(appeared ? 1.0 : 0.3)
+                .opacity(appeared ? 1 : 0)
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
+                appeared = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                pulse = true
             }
         }
     }
