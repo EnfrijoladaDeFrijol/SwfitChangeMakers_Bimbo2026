@@ -15,7 +15,7 @@ struct LoginView: View {
     
     // ──── TOGGLE: activa/desactiva el blur sobre la imagen de fondo ────
     // Cambia esto a `false` para ver la imagen sin blur
-    private let enableBackgroundBlur = false
+    private let enableBackgroundBlur = true
     // ───────────────────────────────────────────────────────────────────
     
     // Credenciales simuladas
@@ -43,7 +43,7 @@ struct LoginView: View {
                         .opacity(logoOpacity)
                     
                     // Subtítulo
-                    Text("Copiloto de Ruta")
+                    Text("Bimbonito GO!")
                         .font(.system(size: 28, weight: .black, design: .rounded))
                         .foregroundStyle(Color.bimboNavy)
                         .opacity(logoOpacity)
