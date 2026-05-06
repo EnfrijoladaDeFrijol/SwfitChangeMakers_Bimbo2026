@@ -38,7 +38,7 @@ extension Color {
     static let bimboDangerRed    = Color(hex: "#FF3B30")  // Error / acción destructiva
 
     // --- Semánticos ---
-    static let bimboWarningOrange = Color(hex: "#C98B3F") // Alertas de caducidad (Ámbar cálido suave)
+    static let bimboWarningOrange = Color(hex: "#E08A30") // Alertas de caducidad (Naranja cálido llamativo)
     static let bimboSuccessGreen  = Color(hex: "#3AAF6C") // Confirmaciones exitosas (verde salvia)
 
     // --- Ventas / Dinero (tonos suaves) ---

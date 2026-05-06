@@ -144,13 +144,31 @@ final class InventarioViewModel: ObservableObject {
 
     /// Reinicia el stock a sus valores iniciales y limpia las entregas (solo fines de demo)
     func reiniciarStockDelCamion() {
-        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-            for i in 0..<stock.count {
-                stock[i].stockActual = stock[i].stockInicial
+        // 1. Limpiar persistencia primero
+        UserDefaults.standard.removeObject(forKey: "camion_stock")
+        UserDefaults.standard.synchronize()
+
+        // 2. Limpiar entregas por tienda
+        entregasPorTienda.removeAll()
+
+        // 3. Reconstruir stock completo desde cero
+        let catalogo = Producto.mockCatalogo
+        let cantidades: [String: Int] = [
+            "P-001": 30, "P-002": 25, "P-003": 20, "P-004": 15,
+            "P-005": 18, "P-006": 22, "P-007": 16,
+        ]
+
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+            stock = catalogo.map { producto in
+                let inicial = cantidades[producto.id] ?? 10
+                return StockItem(
+                    producto: producto,
+                    stockInicial: inicial,
+                    stockActual: inicial  // ← Stock COMPLETO
+                )
             }
-            entregasPorTienda.removeAll()
-            UserDefaults.standard.removeObject(forKey: "camion_stock")
         }
-        UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
 }

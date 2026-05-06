@@ -66,19 +66,17 @@ struct InventarioView: View {
                     Button {
                         vm.reiniciarStockDelCamion()
                     } label: {
-                        HStack(spacing: 8) {
+                        HStack(spacing: 6) {
                             Image(systemName: "arrow.triangle.2.circlepath")
-                            Text("Reiniciar Camión (Demo)")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text("Reiniciar")
+                                .font(.system(size: 14, weight: .semibold))
                         }
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(Color.bimboWarningOrange)
-                        .padding(.vertical, 12)
+                        .foregroundStyle(Color.gray)
+                        .padding(.vertical, 10)
                         .padding(.horizontal, 20)
-                        .background(Color.bimboWarningOrange.opacity(0.1))
+                        .background(Color.gray.opacity(0.12))
                         .clipShape(Capsule())
-                        .overlay(
-                            Capsule().stroke(Color.bimboWarningOrange.opacity(0.3), lineWidth: 1)
-                        )
                     }
                     .buttonStyle(.plain)
                     .padding(.top, 10)
