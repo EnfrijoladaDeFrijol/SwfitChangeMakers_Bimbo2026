@@ -43,16 +43,22 @@ struct DetalleTiendaView: View {
                         .padding(.top, 20)
                         .opacity(contentAppeared ? 1 : 0)
                         .offset(y: contentAppeared ? 0 : 12)
- 
+
+                    // ─── Separador visual ───
+                    sectionDivider
+
                     // ─── PASO 2: Surtir estante (IA sugiere) ───
                     paso2Surtir
-                        .padding(.top, 24)
+                        .padding(.top, 4)
                         .opacity(contentAppeared ? 1 : 0)
- 
+
+                    // ─── Separador visual ───
+                    sectionDivider
+
                     // ─── Resumen entregas a esta tienda ───
                     resumenEntregas
-                        .padding(.top, 24)
- 
+                        .padding(.top, 4)
+
                     // ─── Guardar ───
                     botonGuardar
                         .padding(.top, 28)
@@ -138,60 +144,66 @@ struct DetalleTiendaView: View {
     // MARK: - Header
     // ═══════════════════════════════════════════════════
     private var tiendaHeader: some View {
-        HStack(alignment: .top, spacing: 14) {
+        VStack(spacing: 10) {
+            // Ícono grande centrado
             ZStack {
                 Circle()
                     .fill(LinearGradient.bimboHero)
-                    .frame(width: 60, height: 60)
-                    .shadow(color: Color.bimboBlue.opacity(0.25), radius: 10, y: 4)
+                    .frame(width: 64, height: 64)
+                    .shadow(color: Color.bimboBlue.opacity(0.2), radius: 12, y: 4)
                 Image(systemName: "storefront.fill")
-                    .font(.system(size: 26, weight: .bold))
+                    .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(.white)
             }
- 
-            VStack(alignment: .leading, spacing: 5) {
-                Text(tienda.nombre)
-                    .font(.title2.bold())
-                    .foregroundStyle(Color.bimboNavy)
-                    .lineLimit(2)
- 
-                HStack(spacing: 6) {
-                    Text(tienda.id)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Color.bimboIce)
-                        .clipShape(Capsule())
- 
-                    if !inventario.productosPorCaducar.isEmpty {
-                        HStack(spacing: 3) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.system(size: 9))
-                            Text("\(inventario.productosPorCaducar.count) caducan")
-                                .font(.system(size: 10, weight: .bold))
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Color.bimboWarningOrange)
-                        .clipShape(Capsule())
+
+            // Nombre de la tienda — GRANDE y CENTRADO
+            Text(tienda.nombre)
+                .font(.system(size: 24, weight: .black))
+                .foregroundStyle(Color.bimboNavy)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+
+            // Badges
+            HStack(spacing: 8) {
+                Text(tienda.id)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.bimboIce)
+                    .clipShape(Capsule())
+
+                if !inventario.productosPorCaducar.isEmpty {
+                    HStack(spacing: 3) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 9))
+                        Text("\(inventario.productosPorCaducar.count) caducan")
+                            .font(.system(size: 10, weight: .bold))
                     }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.bimboWarningOrange)
+                    .clipShape(Capsule())
                 }
- 
+
                 // Stock del camión
                 HStack(spacing: 4) {
                     Image(systemName: "box.truck.fill")
                         .font(.system(size: 10))
                     Text("\(inventario.totalRestantes) en camión")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 10, weight: .semibold))
                 }
-                .foregroundStyle(Color.bimboBlue)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.bimboBlue)
+                .clipShape(Capsule())
             }
- 
-            Spacer()
         }
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, 16)
+        .padding(.bottom, 4)
     }
  
     // ═══════════════════════════════════════════════════
@@ -407,6 +419,17 @@ struct DetalleTiendaView: View {
         .accessibilityLabel("Tomar foto de evidencia")
     }
  
+    // ═══════════════════════════════════════════════════
+    // MARK: - Separador de secciones
+    // ═══════════════════════════════════════════════════
+    private var sectionDivider: some View {
+        Rectangle()
+            .fill(Color.bimboIce)
+            .frame(height: 1.5)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 18)
+    }
+
     // MARK: - Helpers
     private func incrementar(_ item: StockSugerido) {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -476,7 +499,7 @@ private struct CaducadoRow: View {
     var body: some View {
         HStack(spacing: 14) {
             // Thumbnail GRANDE
-            ProductoThumb(producto: item.producto, size: 64)
+            ProductoThumb(producto: item.producto, size: 76)
  
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.producto.nombre)
@@ -536,7 +559,7 @@ private struct SurtidoRow: View {
     var body: some View {
         HStack(spacing: 14) {
             // Imagen GRANDE
-            ProductoThumb(producto: item.producto, size: 64)
+            ProductoThumb(producto: item.producto, size: 76)
  
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.producto.nombre)

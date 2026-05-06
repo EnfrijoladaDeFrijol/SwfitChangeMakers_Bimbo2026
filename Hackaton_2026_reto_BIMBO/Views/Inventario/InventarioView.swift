@@ -153,21 +153,21 @@ struct InventarioView: View {
                     .foregroundStyle(.secondary)
                 Text(String(format: "$%.2f", vm.totalVentasRealizadas))
                     .font(.system(size: 28, weight: .black, design: .rounded))
-                    .foregroundStyle(Color.bimboSuccessGreen)
+                    .foregroundStyle(Color.bimboMoneySoft)
                     .contentTransition(.numericText())
                     .animation(.spring(response: 0.3), value: vm.totalVentasRealizadas)
             }
             Spacer()
             Image(systemName: "dollarsign.circle.fill")
                 .font(.system(size: 40))
-                .foregroundStyle(Color.bimboSuccessGreen.opacity(0.2))
+                .foregroundStyle(Color.bimboMoneySoft.opacity(0.18))
         }
         .padding(16)
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.bimboSuccessGreen.opacity(0.3), lineWidth: 1)
+                .stroke(Color.bimboMoneySoft.opacity(0.2), lineWidth: 1)
         )
     }
 }

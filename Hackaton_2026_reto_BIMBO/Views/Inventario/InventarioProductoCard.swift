@@ -97,18 +97,18 @@ struct InventarioProductoCard: View {
                         endPoint: .bottomTrailing
                     )
                 )
-                .frame(width: 80, height: 80)
+                .frame(width: 96, height: 96)
 
             if item.producto.tieneImagen {
                 Image(item.producto.imagenAsset)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 70, height: 70)
+                    .frame(width: 86, height: 86)
                     // La imagen sobresale ligeramente
                     .shadow(color: .black.opacity(0.1), radius: 4, y: 2)
             } else {
                 Image(systemName: "shippingbox.fill")
-                    .font(.system(size: 34, weight: .bold))
+                    .font(.system(size: 40, weight: .bold))
                     .foregroundStyle(Color.bimboBlue.opacity(0.4))
             }
         }

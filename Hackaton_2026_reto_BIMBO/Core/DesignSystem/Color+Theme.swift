@@ -38,8 +38,11 @@ extension Color {
     static let bimboDangerRed    = Color(hex: "#FF3B30")  // Error / acción destructiva
 
     // --- Semánticos ---
-    static let bimboWarningOrange = Color(hex: "#F5A623") // Alertas de caducidad (Ámbar suave)
-    static let bimboSuccessGreen  = Color(hex: "#34C759") // Confirmaciones exitosas
+    static let bimboWarningOrange = Color(hex: "#C98B3F") // Alertas de caducidad (Ámbar cálido suave)
+    static let bimboSuccessGreen  = Color(hex: "#3AAF6C") // Confirmaciones exitosas (verde salvia)
+
+    // --- Ventas / Dinero (tonos suaves) ---
+    static let bimboMoneySoft     = Color(hex: "#2D8F6F") // Teal suave para indicadores monetarios
     static let bimboGold         = Color(hex: "#FFD60A")  // Dorado para logros / badges
 
     // --- Neutros ---
