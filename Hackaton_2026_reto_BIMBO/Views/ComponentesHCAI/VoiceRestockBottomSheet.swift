@@ -5,6 +5,7 @@ import SwiftUI
 struct VoiceRestockBottomSheet: View {
 
     let tiendaNombre: String
+    let tiendaId: String
     let modoQuitar: Bool
 
     @EnvironmentObject var appState: AppState
@@ -13,8 +14,9 @@ struct VoiceRestockBottomSheet: View {
     @State private var wavePhase: Double = 0
     @Environment(\.dismiss) private var dismiss
 
-    init(tiendaNombre: String = "", modoQuitar: Bool = false) {
+    init(tiendaNombre: String = "", tiendaId: String = "", modoQuitar: Bool = false) {
         self.tiendaNombre = tiendaNombre
+        self.tiendaId     = tiendaId
         self.modoQuitar   = modoQuitar
         _vm = StateObject(wrappedValue: VoiceAssistantViewModel(
             tiendaNombre: tiendaNombre,
@@ -222,7 +224,7 @@ struct VoiceRestockBottomSheet: View {
                         color: Color.bimboSuccessGreen
                     ) {
                         // Actualizar inventario del camión
-                        appState.inventario.procesarRestock(items: vm.items, tiendaId: tiendaNombre)
+                        appState.inventario.procesarRestock(items: vm.items, tiendaId: tiendaId)
                         vm.confirmarPedido()
                     }
                 }

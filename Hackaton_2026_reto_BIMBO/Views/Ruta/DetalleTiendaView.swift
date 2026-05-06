@@ -112,6 +112,7 @@ struct DetalleTiendaView: View {
         .sheet(item: $modoVoz) { modo in
             VoiceRestockBottomSheet(
                 tiendaNombre: tienda.nombre,
+                tiendaId: tienda.id,
                 modoQuitar: modo == .retirar
             )
             .environmentObject(appState)
