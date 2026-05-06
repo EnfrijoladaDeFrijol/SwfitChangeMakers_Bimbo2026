@@ -39,18 +39,16 @@ final class InventarioViewModel: ObservableObject {
             "P-005": 18, "P-006": 22, "P-007": 16,
         ]
 
-        // Intenta cargar el estado guardado, si no usa las cantidades iniciales
-        let saved = UserDefaults.standard.dictionary(forKey: "camion_stock") as? [String: Int]
-
+        // Siempre inicia con stock completo (demo: nuevo recorrido)
         stock = catalogo.map { producto in
             let inicial = cantidades[producto.id] ?? 10
-            let actual  = saved?[producto.id] ?? inicial
             return StockItem(
                 producto: producto,
                 stockInicial: inicial,
-                stockActual: min(actual, inicial)
+                stockActual: inicial
             )
         }
+        entregasPorTienda.removeAll()
     }
 
     /// Persiste el estado actual del camión

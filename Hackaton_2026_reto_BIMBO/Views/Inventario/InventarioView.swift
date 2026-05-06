@@ -62,25 +62,6 @@ struct InventarioView: View {
                     }
                     .animation(.spring(response: 0.4), value: vm.stock.map { $0.stockActual })
 
-                    // ─── BOTÓN DE REINICIO DE STOCK (SOLO DEMO) ───
-                    Button {
-                        vm.reiniciarStockDelCamion()
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                                .font(.system(size: 13, weight: .semibold))
-                            Text("Reiniciar")
-                                .font(.system(size: 14, weight: .semibold))
-                        }
-                        .foregroundStyle(Color.gray)
-                        .padding(.vertical, 10)
-                        .padding(.horizontal, 20)
-                        .background(Color.gray.opacity(0.12))
-                        .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.top, 10)
-
                     Spacer().frame(height: 32)
                 }
                 .padding(.top, 8)
