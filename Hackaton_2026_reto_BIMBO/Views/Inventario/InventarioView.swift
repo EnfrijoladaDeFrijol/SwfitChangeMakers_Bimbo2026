@@ -9,8 +9,9 @@ struct InventarioView: View {
     private var vm: InventarioViewModel { appState.inventario }
 
     private var stockFiltrado: [StockItem] {
-        guard !searchText.isEmpty else { return vm.stock }
-        return vm.stock.filter {
+        let stock = appState.inventario.stock
+        guard !searchText.isEmpty else { return stock }
+        return stock.filter {
             $0.producto.nombre.localizedCaseInsensitiveContains(searchText)
         }
     }
