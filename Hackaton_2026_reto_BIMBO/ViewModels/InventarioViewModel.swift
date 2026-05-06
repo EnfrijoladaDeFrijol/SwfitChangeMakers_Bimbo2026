@@ -141,4 +141,16 @@ final class InventarioViewModel: ObservableObject {
     func stockDisponible(productoId: String) -> Int {
         stock.first(where: { $0.producto.id == productoId })?.stockActual ?? 0
     }
+
+    /// Reinicia el stock a sus valores iniciales y limpia las entregas (solo fines de demo)
+    func reiniciarStockDelCamion() {
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+            for i in 0..<stock.count {
+                stock[i].stockActual = stock[i].stockInicial
+            }
+            entregasPorTienda.removeAll()
+            UserDefaults.standard.removeObject(forKey: "camion_stock")
+        }
+        UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+    }
 }
