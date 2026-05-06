@@ -23,6 +23,10 @@ struct InventarioProductoCard: View {
                     .font(.system(size: 17, weight: .heavy))
                     .foregroundStyle(Color.bimboNavy)
                     .lineLimit(1)
+                
+                Text(String(format: "$%.2f", item.producto.precioSugerido))
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color.bimboSuccessGreen)
 
                 // Barra de progreso
                 GeometryReader { geo in

@@ -26,6 +26,11 @@ struct InventarioView: View {
                         .opacity(appeared ? 1 : 0)
                         .offset(y: appeared ? 0 : -20)
 
+                    // Banner de ventas totales
+                    ventasBanner
+                        .padding(.horizontal, 16)
+                        .opacity(appeared ? 1 : 0)
+
                     // Barra búsqueda
                     searchBar
                         .padding(.horizontal, 16)
@@ -116,6 +121,32 @@ struct InventarioView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(Color.bimboBlue.opacity(0.12), lineWidth: 1)
+        )
+    }
+
+    private var ventasBanner: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Total de Venta Realizada")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.secondary)
+                Text(String(format: "$%.2f", vm.totalVentasRealizadas))
+                    .font(.system(size: 28, weight: .black, design: .rounded))
+                    .foregroundStyle(Color.bimboSuccessGreen)
+                    .contentTransition(.numericText())
+                    .animation(.spring(response: 0.3), value: vm.totalVentasRealizadas)
+            }
+            Spacer()
+            Image(systemName: "dollarsign.circle.fill")
+                .font(.system(size: 40))
+                .foregroundStyle(Color.bimboSuccessGreen.opacity(0.2))
+        }
+        .padding(16)
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.bimboSuccessGreen.opacity(0.3), lineWidth: 1)
         )
     }
 }

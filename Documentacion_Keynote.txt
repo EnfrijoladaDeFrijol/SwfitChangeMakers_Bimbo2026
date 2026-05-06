@@ -1,0 +1,33 @@
+Documentación del Proyecto - Hackathon Bimbo 2026
+
+Título de proyecto
+Ruta Sustentable Bimbo (o "Swift Change Makers - Reto Bimbo")
+
+Propósito de la aplicación
+Proveer una herramienta móvil avanzada e intuitiva para los repartidores de Bimbo que optimiza sus rutas de entrega de manera sustentable, facilita el control de inventario en tiempo real ("Mi Camión") y asiste en la toma de decisiones al sugerir inteligentemente qué cantidades surtir y alertar sobre productos próximos a caducar.
+
+Necesidad que resuelve
+Resuelve dos grandes retos logísticos y ecológicos:
+1. Reducción de Huella de Carbono: Optimiza automáticamente el trazado de la ruta para que el camión recorra la menor distancia posible entre el CEDIS y las tiendas, ahorrando tiempo y reduciendo emisiones.
+2. Minimización de Desperdicio de Alimentos: Gracias a las alertas de caducidad y a las sugerencias de surtido en el estante, se evita el exceso de inventario en las tiendas, reduciendo drásticamente las devoluciones por producto vencido. Además, le brinda visibilidad al repartidor sobre las ventas realizadas y el stock restante.
+
+Nombre de los integrantes
+- [Tu Nombre]
+- [Nombre de tu amigo 1]
+- [Nombre de tu amigo 2]
+
+Nombre de la universidad del equipo
+- [Nombre de su Universidad]
+
+Nombre del Lab Manager o profesor
+- [Nombre de su Profesor o Lab Manager]
+
+Lista de tecnologías utilizadas
+- Lenguaje: Swift 5+
+- Framework UI: SwiftUI (Interfaces declarativas, animaciones fluidas y componentes modales).
+- Mapas y Localización: MapKit y CoreLocation (Cálculo de rutas asíncronas con MKDirections, renderizado de polilíneas y pines personalizados).
+- Arquitectura: MVVM (Model-View-ViewModel) para separar la lógica de negocio de las vistas.
+- Persistencia de Datos: UserDefaults para guardar el estado del inventario localmente.
+
+Lista de repositorios necesarios para la aplicación
+- Repositorio de GitHub: https://github.com/EnfrijoladaDeFrijol/SwfitChangeMakers_Bimbo2026

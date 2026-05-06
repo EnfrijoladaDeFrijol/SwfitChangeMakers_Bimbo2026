@@ -12,6 +12,12 @@ final class InventarioViewModel: ObservableObject {
     var totalProductos: Int    { stock.reduce(0) { $0 + $1.stockInicial } }
     var totalEntregados: Int   { stock.reduce(0) { $0 + $1.entregados } }
     var totalRestantes: Int    { stock.reduce(0) { $0 + $1.stockActual } }
+    var totalVentasRealizadas: Double {
+        stock.reduce(0) { total, item in
+            let cantidadVendida = item.stockInicial - item.stockActual
+            return total + (Double(cantidadVendida) * item.producto.precioSugerido)
+        }
+    }
     var porcentajeGlobal: Double {
         guard totalProductos > 0 else { return 0 }
         return Double(totalEntregados) / Double(totalProductos)

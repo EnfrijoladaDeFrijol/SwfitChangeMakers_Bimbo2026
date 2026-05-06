@@ -483,6 +483,9 @@ private struct CaducadoRow: View {
                     .font(.system(size: 16, weight: .heavy))
                     .foregroundStyle(Color.bimboNavy)
                     .lineLimit(1)
+                Text(String(format: "$%.2f", item.producto.precioSugerido))
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Color.bimboSuccessGreen)
                 HStack(spacing: 5) {
                     Image(systemName: "clock.fill")
                         .font(.system(size: 10, weight: .bold))
@@ -540,6 +543,9 @@ private struct SurtidoRow: View {
                     .font(.system(size: 16, weight: .heavy))
                     .foregroundStyle(Color.bimboNavy)
                     .lineLimit(1)
+                Text(String(format: "$%.2f", item.producto.precioSugerido))
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Color.bimboSuccessGreen)
                 HStack(spacing: 5) {
                     Image(systemName: "box.truck.fill")
                         .font(.system(size: 10, weight: .bold))
