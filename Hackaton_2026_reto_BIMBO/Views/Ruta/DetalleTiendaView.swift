@@ -1,4 +1,3 @@
-
 import SwiftUI
  
 // MARK: - DetalleTiendaView (Rediseño completo: paso a paso intuitivo)
@@ -18,6 +17,7 @@ struct DetalleTiendaView: View {
     @State private var showEvidencia = false
     @State private var headerAppeared = false
     @State private var contentAppeared = false
+    @State private var showSavedToast = false
     @Environment(\.dismiss) private var dismiss
  
     enum ModoVoz: Identifiable {
@@ -91,6 +91,34 @@ struct DetalleTiendaView: View {
                 }
                 .transition(.move(edge: .top).combined(with: .opacity))
                 .zIndex(20)
+            }
+            
+            // ─── Toast Overlay ───
+            if showSavedToast {
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                    .zIndex(100)
+                
+                VStack(spacing: 16) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 60))
+                        .foregroundStyle(Color.bimboSuccessGreen)
+                        .symbolEffect(.bounce, value: showSavedToast)
+                    
+                    Text("Se ha guardado tu pedido")
+                        .font(.title2.bold())
+                        .foregroundStyle(Color.bimboNavy)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(32)
+                .background(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(Color.white)
+                        .shadow(color: .black.opacity(0.15), radius: 20, y: 10)
+                )
+                .padding(.horizontal, 40)
+                .zIndex(101)
+                .transition(.opacity.combined(with: .scale(scale: 0.9)))
             }
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -366,7 +394,14 @@ struct DetalleTiendaView: View {
                 }
             }
             vm.guardarStock(tiendaId: tienda.id)
-            dismiss()
+            
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                showSavedToast = true
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                dismiss()
+            }
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "checkmark.seal.fill")

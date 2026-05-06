@@ -1,4 +1,5 @@
 import SwiftUI
+import WebKit
 
 // MARK: - VoiceRestockBottomSheet
 // Pantalla de Restock por Voz — azul minimalista, contextual por tienda
@@ -236,22 +237,21 @@ struct VoiceRestockBottomSheet: View {
     // MARK: - Success overlay
     private var successOverlay: some View {
         ZStack {
-            Color.black.opacity(0.4).ignoresSafeArea()
+            Color.black.opacity(0.3).ignoresSafeArea()
+                .background(.ultraThinMaterial)
                 .onTapGesture { vm.showSuccess = false; dismiss() }
 
             VStack(spacing: 20) {
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 72, weight: .bold))
-                    .foregroundStyle(Color.bimboSuccessGreen)
-                    .symbolEffect(.bounce, value: vm.showSuccess)
+                GifImage("oso3D_Like")
+                    .frame(width: 220, height: 220)
 
                 Text("¡Pedido Confirmado!")
                     .font(.largeTitle.bold())
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.bimboNavy)
 
                 Text(vm.bimboMessage)
                     .font(.title3)
-                    .foregroundStyle(.white.opacity(0.8))
+                    .foregroundStyle(Color.bimboNavy.opacity(0.8))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
 
@@ -261,9 +261,9 @@ struct VoiceRestockBottomSheet: View {
                 } label: {
                     Text("Cerrar")
                         .font(.title3.bold())
-                        .foregroundStyle(Color.bimboNavy)
+                        .foregroundStyle(.white)
                         .frame(maxWidth: .infinity).frame(height: 56)
-                        .background(.white)
+                        .background(Color.bimboBlue)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
                 .padding(.horizontal, 32)
@@ -272,7 +272,8 @@ struct VoiceRestockBottomSheet: View {
             .padding(32)
             .background(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(LinearGradient.bimboHero)
+                    .fill(Color.white)
+                    .shadow(color: .black.opacity(0.1), radius: 20, y: 10)
             )
             .padding(.horizontal, 24)
         }
@@ -465,4 +466,40 @@ private struct AudioWaveView: View {
 
 #Preview("Voice Restock — Retirar") {
     VoiceRestockBottomSheet(tiendaNombre: "Abarrotes Don Cheto", modoQuitar: true)
+}
+
+// ═══════════════════════════════════════════════════════
+// MARK: - GifImage Component
+// ═══════════════════════════════════════════════════════
+struct GifImage: UIViewRepresentable {
+    private let name: String
+
+    init(_ name: String) {
+        self.name = name
+    }
+
+    func makeUIView(context: Context) -> WKWebView {
+        let webView = WKWebView()
+        webView.isOpaque = false
+        webView.backgroundColor = .clear
+        webView.scrollView.backgroundColor = .clear
+        webView.scrollView.isScrollEnabled = false
+        webView.scrollView.bounces = false
+        webView.isUserInteractionEnabled = false
+        
+        if let asset = NSDataAsset(name: name) {
+            webView.load(
+                asset.data,
+                mimeType: "image/gif",
+                characterEncodingName: "UTF-8",
+                baseURL: URL(fileURLWithPath: "")
+            )
+        } else {
+            print("❌ No se encontró el GIF: \(name) en los Assets")
+        }
+        
+        return webView
+    }
+
+    func updateUIView(_ uiView: WKWebView, context: Context) { }
 }
